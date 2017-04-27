@@ -1,58 +1,59 @@
-var fs = require('file-system');
-var htmlparser = require('html-parser');
-// read file
-// parse each data in html
-// use regex
-// push dans l'objectResult all info from html - json.stringify?
+const fs = require('file-system');
+const htmlparser = require('htmlparser');
+// const sys = require('sys');
+const util = require('util');
+
+/* STEPS
+    read HTML file
+    parse file - htmlparser -> objet JS
+    parcourir l'objet et recuperer data
+    creer objet dynamiquement au fur et a mesure
+*/
+
+const extractData = (data) => {
+  console.log('----------EXTRACT DATA------------------');
+  // console.log(util.inspect(data, false, null));
+  // const obj = util.inspect(data, false, null);
+  // console.log(obj);
+  console.log(data[2].children);
 
 
-objectResult = {
-  status: "",
-  result: {
-    trips: [
-      {
-        code: "",
-        name: "",
-        details: {
-          price: "",
-          roundTrips: [
-            {
-              type: "",
-              date: "",
-              trains: [],
-            }
-          ]
-        }
-      }
-    ]
-    // custom: {
-      // price: [],
-    // }
+}
+
+const parseHTMLFile = (html) => {
+  console.log('----------PARSE FILE--------------------');
+  const handler = new htmlparser.DefaultHandler((err, dom) => {
+    if (err) throw err;
+  }, { verbose: false, ignoreWhitespace: true });
+  const parser = new htmlparser.Parser(handler);
+  parser.parseComplete(html);
+  // console.log(util.inspect(handler.dom, false, null));
+  // console.log(handler.dom);
+  extractData(handler.dom);
+}
+
+const readHTMLFile = (path) => {
+  console.log('----------READ HTML FILE----------------');
+  try {
+    const html = fs.readFileSync(path, 'utf8');
+    // console.log('reading file', html);
+    parseHTMLFile(html);
+  } catch (e) {
+    console.error(e);
+    process.exit();
   }
-}
-
-module.exports.init = () => {
-  console.log('hi');
-};
-
-module.exports.parseFile = () => {
-  console.log('parse file');
-
-}
-
-
-module.exports.readHTMLFile = (req, res) => {
-  console.log('---------------------------');
-  const html = fs.readFileSync('./test.html');
-  console.log('reading file', html);
-  module.exports.parseFile(html);
-  // fs.readFileSync('./test.html', (html, err) => {
-  //   console.log('read file');
-  //   if (err) throw err;
-  //   if (html) {
-  //     console.log('ok ca marche', html);
-  //   }
-  // })
   // const args = process.argv;
   // console.log(args);
 }
+
+if (
+  !process.argv ||
+  process.argv.length < 3 ||
+  process.argv.length >= 4 ||
+  !process.argv[2]
+) {
+  console.error('filename required');
+  process.exit();
+}
+
+readHTMLFile(process.argv[2]);
