@@ -1,4 +1,4 @@
-# test-technique---parser d'emails SNFC
+# Parser d'emails SNFC
 
 Pour lancer le programme, lancer la commande suivante sur le terminal:
 node ./app.js ./test.html
