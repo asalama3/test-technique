@@ -1,4 +1,4 @@
-# Parser d'emails SNFC
+# Parser d'emails SNCF
 
 Pour lancer le programme, lancer la commande suivante sur le terminal:
 node ./app.js ./test.html
