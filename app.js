@@ -1,49 +1,116 @@
 const fs = require('file-system');
-const htmlparser = require('htmlparser');
-// const sys = require('sys');
+const htmlparser = require('htmlparser2');
 const util = require('util');
 
-/* STEPS
-    read HTML file
-    parse file - htmlparser -> objet JS
-    parcourir l'objet et recuperer data
-    creer objet dynamiquement au fur et a mesure
-*/
+const totalPrice = (prefix, text) => {
+    const regex = new RegExp(prefix + '(\\d+[\\,]\\d+?)\\s?[€]', 'gm');
+    const matches = regex.exec(text);
+    if (!matches) return null;
+    const newPrice = matches[1].replace(',', '.');
+    return newPrice;
+  }
 
-const extractData = (data) => {
-  console.log('----------EXTRACT DATA------------------');
-  // console.log(util.inspect(data, false, null));
-  // const obj = util.inspect(data, false, null);
-  // console.log(obj);
-  console.log(data[2].children);
+const findName = (prefix, text) => {
+  const regex = new RegExp(prefix + '[a-z]{3,30}');
+  const matches = regex.exec(text);
+  if (!matches) return null;
+  const result = matches[0].split(':')
+  const name = result[1].split('\n');
+  return name[1];
+}
 
+const findCode = (prefix, text) => {
+  const regex = new RegExp(prefix + '([A-Z0-9]+)');
+  const matches = regex.exec(text);
+  if (!matches) return null;
+  return matches[1];
+}
 
+const tripsData = (contents) => {
+  let result = '';
+  result = contents.map((src, key) => {
+      let object = {};
+      let infos = src.split('\n');
+      const date = new Date(infos[0]);
+      object.type = infos[1];
+      object.date = date;
+      const data = {};
+      object.trains = [];
+      data.departureTime = infos[2].replace('h', ':');
+      data.departureStation = infos[3];
+      data.arrivalTime = infos[7].replace('h', ':');
+      data.arrivalStation = infos[8];
+      data.type = infos[4];
+      data.number = infos[5];
+      object.trains.push(data);
+      return object;
+    });
+  return result;
+}
+
+const findRoundTrips = (text) => {
+  const regex = new RegExp('([a-z-A-Z]+\\s\\d+\\s[a-z-A-Z]+)\\s(Aller|Retour)\\s(\\d{2}(h)\\d{2})\\s([A-Z ]+)\\s([A-Z]+)\\s(\\d{4})\\s([\\w]+)\\s([a-z ]+)\\s(\\d{2}(h)\\d{2})\\s([A-Z ]+)\\s([A-Z]+)\\s([\\w]+)', 'g');
+  const matches = text.match(regex);
+  const tickets = [ matches[0], matches[1], matches[2], matches[3] ];
+  return tickets;
+}
+
+const getCustom = (text) => {
+  const regex = new RegExp('(passagers|Carte Enfant\\+)\\s(\\d+[\,]\\d+)', 'g');
+  const matches = text.match(regex);
+  const firstPrice = matches[0].split('\n')[1].replace(',', '.');
+  const secondPrice = parseFloat(matches[1].split('\n')[1]).toFixed(0);
+  const thirdPrice = parseFloat(matches[2].split('\n')[1]).toFixed(0);
+  const allPrices = {};
+  const tab = [];
+  tab.push({ value: firstPrice });
+  tab.push({ value: secondPrice });
+  tab.push({ value: thirdPrice });
+  return tab;
+}
+
+const extractData = (content) => {
+  const price = totalPrice('TOTAL payé en ligne :\n', content);
+  const name = findName('Nom\nassocié\n:\n', content);
+  const code = findCode('Référence\nde\ndossier\n:\n', content);
+  const roundTrips = tripsData(findRoundTrips(content));
+  const custom = getCustom(content);
+  let dataObj = {};
+  dataObj.status = "ok";
+  dataObj.result = {};
+  dataObj.result.trips = [{}];
+  dataObj.result.custom = {};
+  dataObj.result.custom.prices = custom;
+  dataObj.result.trips[0].code = code;
+  dataObj.result.trips[0].name = name;
+  dataObj.result.trips[0].details = {};
+  dataObj.result.trips[0].details.price = price;
+  dataObj.result.trips[0].details.roundTrips = roundTrips;
+  console.log(util.inspect(dataObj, { showHidden: false, depth: null }));
 }
 
 const parseHTMLFile = (html) => {
-  console.log('----------PARSE FILE--------------------');
-  const handler = new htmlparser.DefaultHandler((err, dom) => {
-    if (err) throw err;
-  }, { verbose: false, ignoreWhitespace: true });
-  const parser = new htmlparser.Parser(handler);
-  parser.parseComplete(html);
-  // console.log(util.inspect(handler.dom, false, null));
-  // console.log(handler.dom);
-  extractData(handler.dom);
+  let content = '';
+  const parser = new htmlparser.Parser({
+    ontext: (text) => {
+        text = text.trim();
+        if (!text || text === '\\r\\n') return ;
+        content += text + '\n';
+    },
+  }, { decodeEntities: true });
+  parser.write(html);
+  parser.end();
+  return content;
 }
 
 const readHTMLFile = (path) => {
-  console.log('----------READ HTML FILE----------------');
   try {
     const html = fs.readFileSync(path, 'utf8');
-    // console.log('reading file', html);
-    parseHTMLFile(html);
+    extractData(parseHTMLFile(html));
   } catch (e) {
     console.error(e);
     process.exit();
   }
-  // const args = process.argv;
-  // console.log(args);
 }
 
 if (
