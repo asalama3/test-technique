@@ -1,6 +1,6 @@
 # Parser d'emails SNCF
 
-Pour lancer le programme, lancer la commande suivante sur le terminal:
+Pour exécuter le programme, lancer la commande suivante sur le terminal:
 node ./app.js ./test.html
 
 Outil de Parser d'emails de billets SNCF:
