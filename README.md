@@ -1,10 +1,10 @@
 # Parser d'emails de billets de train
 
 Pour exécuter le programme, lancer les commandes suivantes sur le terminal:
-git clone repo test
-cd test
-npm i
-node ./app.js ./test.html
+- git clone repo test
+- cd test
+- npm i
+- node ./app.js ./test.html
 
 Outil de Parser d'emails de billets de train:
 
