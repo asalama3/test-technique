@@ -2,16 +2,19 @@ const fs = require('file-system');
 const htmlparser = require('htmlparser2');
 const util = require('util');
 
-const totalPrice = (prefix, text) => {
-    const regex = new RegExp(prefix + '(\\d+[\\,]\\d+?)\\s?[€]', 'gm');
-    const matches = regex.exec(text);
-    if (!matches) return null;
-    const newPrice = matches[1].replace(',', '.');
-    return newPrice;
-  }
+/* fonction pour récupérer le prix total des billets (key: price) */
+const totalPrice = (text) => {
+  const regex = new RegExp('([A-Z-a-z ]+[\:])\\s\\d+[\,]\\d+', 'g');
+  const matches = regex.exec(text);
+  if (!matches) return null;
+  const price = matches[0].split('\n');
+  const newPrice = price[1].replace(',', '.');
+  return newPrice;
+}
 
-const findName = (prefix, text) => {
-  const regex = new RegExp(prefix + '[a-z]{3,30}');
+/* fonction pour récupérer le nom associé aux billets de train */
+const findName = (ref, text) => {
+  const regex = new RegExp(ref + '[a-z]{3,30}');
   const matches = regex.exec(text);
   if (!matches) return null;
   const result = matches[0].split(':')
@@ -19,35 +22,38 @@ const findName = (prefix, text) => {
   return name[1];
 }
 
-const findCode = (prefix, text) => {
-  const regex = new RegExp(prefix + '([A-Z0-9]+)');
+/* fonction pour récupérer la référence du dossier */
+const findCode = (ref, text) => {
+  const regex = new RegExp(ref + '([A-Z0-9]+)');
   const matches = regex.exec(text);
   if (!matches) return null;
   return matches[1];
 }
 
+/* fonction pour organiser les données de la fonction findRoundTrips */
 const tripsData = (contents) => {
   let result = '';
   result = contents.map((src, key) => {
-      let object = {};
-      let infos = src.split('\n');
-      const date = new Date(infos[0]);
-      object.type = infos[1];
-      object.date = date;
-      const data = {};
-      object.trains = [];
-      data.departureTime = infos[2].replace('h', ':');
-      data.departureStation = infos[3];
-      data.arrivalTime = infos[7].replace('h', ':');
-      data.arrivalStation = infos[8];
-      data.type = infos[4];
-      data.number = infos[5];
-      object.trains.push(data);
-      return object;
-    });
+    let object = {};
+    let infos = src.split('\n');
+    const date = new Date(infos[0]);
+    object.type = infos[1];
+    object.date = date;
+    const data = {};
+    object.trains = [];
+    data.departureTime = infos[2].replace('h', ':');
+    data.departureStation = infos[3];
+    data.arrivalTime = infos[7].replace('h', ':');
+    data.arrivalStation = infos[8];
+    data.type = infos[4];
+    data.number = infos[5];
+    object.trains.push(data);
+    return object;
+  });
   return result;
 }
 
+/* fonction pour récuperer les infos des billets (key: roundTrips) */
 const findRoundTrips = (text) => {
   const regex = new RegExp('([a-z-A-Z]+\\s\\d+\\s[a-z-A-Z]+)\\s(Aller|Retour)\\s(\\d{2}(h)\\d{2})\\s([A-Z ]+)\\s([A-Z]+)\\s(\\d{4})\\s([\\w]+)\\s([a-z ]+)\\s(\\d{2}(h)\\d{2})\\s([A-Z ]+)\\s([A-Z]+)\\s([\\w]+)', 'g');
   const matches = text.match(regex);
@@ -55,6 +61,7 @@ const findRoundTrips = (text) => {
   return tickets;
 }
 
+/* fonction pour récupérer les prix de chaque billet */
 const getCustom = (text) => {
   const regex = new RegExp('(passagers|Carte Enfant\\+)\\s(\\d+[\,]\\d+)', 'g');
   const matches = text.match(regex);
@@ -69,8 +76,9 @@ const getCustom = (text) => {
   return tab;
 }
 
+/* fonction qui récupère toutes les données nécessaires pour faire le json */
 const extractData = (content) => {
-  const price = totalPrice('TOTAL payé en ligne :\n', content);
+  const price = totalPrice(content);
   const name = findName('Nom\nassocié\n:\n', content);
   const code = findCode('Référence\nde\ndossier\n:\n', content);
   const roundTrips = tripsData(findRoundTrips(content));
@@ -89,6 +97,7 @@ const extractData = (content) => {
   console.log(util.inspect(dataObj, { showHidden: false, depth: null }));
 }
 
+/* parsing du html en text */
 const parseHTMLFile = (html) => {
   let content = '';
   const parser = new htmlparser.Parser({
@@ -103,6 +112,7 @@ const parseHTMLFile = (html) => {
   return content;
 }
 
+/* lecture du fichier html */
 const readHTMLFile = (path) => {
   try {
     const html = fs.readFileSync(path, 'utf8');
@@ -113,6 +123,7 @@ const readHTMLFile = (path) => {
   }
 }
 
+/* gestion d'erreurs */
 if (
   !process.argv ||
   process.argv.length < 3 ||
